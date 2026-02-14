@@ -8,24 +8,28 @@ const BASE_URL =
 // Analyze Case (Primary + Follow-up)
 // ==============================
 
-export async function analyzeCase(symptoms, imageFile, followUpCaseId = null) {
+const API_URL = import.meta.env.VITE_API_URL;
+
+export async function analyzeCase(symptoms, imageFile) {
   const formData = new FormData();
   formData.append("symptoms", symptoms);
   formData.append("image", imageFile);
 
-  if (followUpCaseId) {
-    formData.append("follow_up_case_id", followUpCaseId);
+  const response = await fetch(`${API_URL}/analyze/`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error("API error:", text);
+    throw new Error("Analysis failed");
   }
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 sec safety
+  return await response.json();
+}
 
-    const response = await fetch(`${BASE_URL}/analyze/`, {
-      method: "POST",
-      body: formData,
-      signal: controller.signal
-    });
+
 
     clearTimeout(timeoutId);
 
