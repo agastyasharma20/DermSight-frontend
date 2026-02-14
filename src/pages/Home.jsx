@@ -25,7 +25,7 @@ function Home() {
       setLoading(true);
 
       const response = await axios.post(
-        "http://127.0.0.1:8000/analyze/",
+        `${import.meta.env.VITE_API_URL}/analyze/`,
         formData,
         {
           headers: {
