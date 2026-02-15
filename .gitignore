@@ -1,1 +1,17 @@
-VITE_API_URL=https://dermsight-backend.onrender.com
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+
+# Environment files
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
