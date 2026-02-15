@@ -9,186 +9,170 @@ function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [error, setError] = useState("");
 
-  // ---------------------------
-  // Handle Image Upload
-  // ---------------------------
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setError("Only image files are allowed.");
-      return;
-    }
-
-    setError("");
     setImage(file);
-    setPreview(URL.createObjectURL(file));
+    if (file) setPreview(URL.createObjectURL(file));
   };
 
-  // ---------------------------
-  // Submit Analysis
-  // ---------------------------
   const handleSubmit = async () => {
     if (!image || symptoms.trim().length < 5) {
-      setError("Please upload an image and describe symptoms properly.");
+      alert("Please provide detailed symptoms and upload an image.");
       return;
     }
 
-    setError("");
     setLoading(true);
     setResult(null);
-    setShowDetails(false);
 
     try {
       const data = await analyzeCase(symptoms, image);
       setResult(data);
-    } catch (err) {
-      setError("Server error. Please try again.");
+    } catch (error) {
+      alert("Server error. Please try again.");
     }
 
     setLoading(false);
   };
 
-  // ---------------------------
-  // Urgency Color Map
-  // ---------------------------
   const getUrgencyColor = (color) => {
     const map = {
-      RED: "#e53935",
-      ORANGE: "#fb8c00",
-      YELLOW: "#fdd835",
-      GREEN: "#43a047",
+      RED: "#ff4d4d",
+      ORANGE: "#ff9f1c",
+      YELLOW: "#ffd60a",
+      GREEN: "#2ec4b6",
     };
-    return map[color] || "#90a4ae";
+    return map[color] || "#94a3b8";
   };
 
-  // Normalize risk percentage for UI
-  const riskPercentage = result
-    ? Math.min(result.risk_score * 15, 100)
-    : 0;
+  const riskPercentage = result ? Math.min(result.risk_score * 15, 100) : 0;
 
   return (
-    <div className="container">
-      <h1 className="logo">🩺 DermSight</h1>
-      <p className="subtitle">
-        AI-Powered Multimodal Clinical Triage System
-      </p>
+    <div className="main-wrapper">
+      <div className="container">
+        <header className="header">
+          <h1>🩺 DermSight</h1>
+          <p>AI-Powered Multimodal Clinical Triage System</p>
+        </header>
 
-      {/* ---------------- INPUT CARD ---------------- */}
-      <div className="input-card">
-        <textarea
-          placeholder="Describe symptoms in detail..."
-          value={symptoms}
-          onChange={(e) => setSymptoms(e.target.value)}
-        />
+        {/* INPUT CARD */}
+        <div className="card input-card">
+          <textarea
+            placeholder="Describe symptoms clearly (location, duration, severity)..."
+            value={symptoms}
+            onChange={(e) => setSymptoms(e.target.value)}
+          />
 
-        <input type="file" accept="image/*" onChange={handleImageChange} />
+          <input type="file" accept="image/*" onChange={handleImageChange} />
 
-        {preview && (
-          <div className="preview-card">
-            <img src={preview} alt="Preview" />
+          {preview && (
+            <div className="image-preview">
+              <img src={preview} alt="Preview" />
+            </div>
+          )}
+
+          <button
+            className="analyze-btn"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? "Analyzing..." : "Analyze Case"}
+          </button>
+        </div>
+
+        {/* LOADING */}
+        {loading && (
+          <div className="loading-section">
+            <div className="spinner"></div>
+            <p>Running multimodal clinical assessment...</p>
           </div>
         )}
 
-        <button onClick={handleSubmit} disabled={loading}>
-          {loading ? "🔍 Running Clinical Analysis..." : "🚀 Analyze Case"}
-        </button>
+        {/* RESULT CARD */}
+        {result && (
+          <div className="card result-card">
 
-        {error && <div className="error-box">{error}</div>}
+            <div className="result-header">
+              <h2>{result.prediction}</h2>
+              <span
+                className="urgency-badge"
+                style={{ background: getUrgencyColor(result.urgency_color) }}
+              >
+                {result.urgency}
+              </span>
+            </div>
+
+            {/* Risk Bar */}
+            <div className="risk-container">
+              <div
+                className="risk-fill"
+                style={{
+                  width: `${riskPercentage}%`,
+                  background: getUrgencyColor(result.urgency_color),
+                }}
+              />
+            </div>
+
+            <div className="metrics">
+              <div>
+                <span>Confidence</span>
+                <strong>{(result.confidence * 100).toFixed(0)}%</strong>
+              </div>
+              <div>
+                <span>Risk Score</span>
+                <strong>{result.risk_score}</strong>
+              </div>
+              <div>
+                <span>Redness Index</span>
+                <strong>{result.image_redness_score.toFixed(1)}</strong>
+              </div>
+            </div>
+
+            <h3>Clinical Reasoning</h3>
+            <ul className="reasoning-list">
+              {result.clinical_reasoning?.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+
+            {result.emergency_action && (
+              <div className="emergency-alert">
+                🚨 {result.emergency_action}
+              </div>
+            )}
+
+            <button
+              className="details-btn"
+              onClick={() => setShowDetails(!showDetails)}
+            >
+              {showDetails ? "Hide AI Explanation" : "View AI Explanation"}
+            </button>
+
+            {showDetails && (
+              <div className="ai-box">
+                <h4>AI Summary</h4>
+                <p>{result.ai_explanation?.summary}</p>
+
+                <h4>Differential Diagnoses</h4>
+                <ul>
+                  {result.ai_explanation?.differentials?.map((d, i) => (
+                    <li key={i}>{d}</li>
+                  ))}
+                </ul>
+
+                <h4>Warning Signs</h4>
+                <ul>
+                  {result.ai_explanation?.warning_signs?.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <p className="disclaimer">{result.disclaimer}</p>
+          </div>
+        )}
       </div>
-
-      {/* ---------------- LOADING ---------------- */}
-      {loading && (
-        <div className="loading">
-          <div className="spinner"></div>
-          <p>Performing multimodal AI assessment...</p>
-        </div>
-      )}
-
-      {/* ---------------- RESULT CARD ---------------- */}
-      {result && (
-        <div className="result-card fade-in">
-          <h2>{result.prediction}</h2>
-
-          {/* Urgency Badge */}
-          <div
-            className="urgency-badge"
-            style={{ backgroundColor: getUrgencyColor(result.urgency_color) }}
-          >
-            {result.urgency}
-          </div>
-
-          {/* Risk Progress Bar */}
-          <div className="risk-bar">
-            <div
-              className="risk-fill"
-              style={{
-                width: `${riskPercentage}%`,
-                backgroundColor: getUrgencyColor(result.urgency_color),
-              }}
-            ></div>
-          </div>
-
-          <p>
-            <strong>Confidence:</strong>{" "}
-            {(result.confidence * 100).toFixed(0)}%
-          </p>
-
-          <p>
-            <strong>Risk Score:</strong> {result.risk_score}
-          </p>
-
-          {/* Clinical Reasoning */}
-          <h3>Clinical Reasoning</h3>
-          <ul>
-            {result.clinical_reasoning?.map((item, index) => (
-              <li key={index}>✓ {item}</li>
-            ))}
-          </ul>
-
-          {/* Emergency Alert */}
-          {result.emergency_action && (
-            <div className="emergency-box">
-              🚨 {result.emergency_action}
-            </div>
-          )}
-
-          {/* Expandable AI Explanation */}
-          <button
-            className="details-btn"
-            onClick={() => setShowDetails(!showDetails)}
-          >
-            {showDetails ? "Hide AI Explanation" : "View AI Explanation"}
-          </button>
-
-          {showDetails && (
-            <div className="ai-details">
-              <h3>AI Summary</h3>
-              <p>{result.ai_explanation?.summary}</p>
-
-              <h4>Differential Diagnoses</h4>
-              <ul>
-                {result.ai_explanation?.differentials?.map((d, i) => (
-                  <li key={i}>{d}</li>
-                ))}
-              </ul>
-
-              <h4>Warning Signs</h4>
-              <ul>
-                {result.ai_explanation?.warning_signs?.map((w, i) => (
-                  <li key={i}>{w}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <p className="disclaimer">{result.disclaimer}</p>
-        </div>
-      )}
     </div>
   );
 }
